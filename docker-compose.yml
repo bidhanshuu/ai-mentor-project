@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend_v2
+      dockerfile: Dockerfile
+    container_name: automentor-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Load from .env file - MUST exist locally
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-models/gemini-2.0-flash}
+      - GEMINI_TIMEOUT_SECONDS=${GEMINI_TIMEOUT_SECONDS:-60}
+      - GEMINI_MAX_RETRIES=${GEMINI_MAX_RETRIES:-3}
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./backend_v2/.env
+    volumes:
+      # Mount source code for development (optional)
+      # Uncomment for development with live reload:
+      # - ./backend_v2:/app
+      # Override .env at runtime (important!)
+      - ./backend_v2/.env:/app/.env:ro
+    networks:
+      - automentor
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: automentor-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      # Backend connection URLs
+      - VITE_API_BASE_URL=http://backend:8000
+      - VITE_WS_BASE_URL=ws://backend:8000
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - automentor
+    restart: on-failure
+
+networks:
+  automentor:
+    driver: bridge
+    name: automentor-network

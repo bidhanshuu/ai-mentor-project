@@ -1,0 +1,7 @@
+subject,unit,topic,source_type,source_name,difficulty,question_type
+Calculus,Differentiation,Chain Rule,lecture_notes,chain_rule_notes.md,medium,concept
+Calculus,Integration,Integration by Parts,lecture_notes,integration_by_parts.md,medium,exam_prep
+DSA,Complexity,Big-O Basics,lecture_notes,big_o_basics.md,medium,exam_prep
+DSA,Recursion,Base Case,lecture_notes,recursion_base_case.md,medium,concept
+Japanese,Vocabulary,N4 Recall,reference_answer,n4_vocab_recall.md,medium,viva_prep
+PHP,Arrays,Associative Arrays,lab_manual,associative_arrays.md,easy,lab_help

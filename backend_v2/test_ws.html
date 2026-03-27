@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoMentor | Diagnostic Client</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        /* =====================================================================
+           DESIGN TOKENS — NVIDIA Enterprise Light Theme
+           ===================================================================== */
+        :root {
+            /* Surface */
+            --bg-page:          #f3f4f5;
+            --bg-panel:         #ffffff;
+            --bg-terminal:      #fafafa;
+            --bg-input:         #ffffff;
+            --bg-input-focus:   #ffffff;
+            --bg-btn-clear:     #f3f4f5;
+
+            /* Borders */
+            --border-default:   #e0e0e0;
+            --border-strong:    #c8c8c8;
+            --border-focus:     #76b900;
+
+            /* Typography */
+            --text-primary:     #1a1a1a;
+            --text-secondary:   #5a5a5a;
+            --text-muted:       #909090;
+            --text-label:       #404040;
+
+            /* NVIDIA Brand Green */
+            --nvidia-green:     #76b900;
+            --nvidia-green-d:   #5e9400;
+            --nvidia-green-l:   #e8f5cc;
+            --nvidia-green-xl:  #f4faec;
+
+            /* Semantic log colors — calibrated for light bg readability */
+            --log-stream:       #0066cc;
+            --log-agent:        #b85c00;
+            --log-payload:      #1a7a3a;
+            --log-done:         #6b3fa0;
+            --log-success:      #76b900;
+            --log-error:        #cc2200;
+            --log-info:         #5a5a5a;
+
+            /* Status pill colors */
+            --status-connected-bg:    #e8f5cc;
+            --status-connected-text:  #3d6200;
+            --status-disconnected-bg: #fdecea;
+            --status-disconnected-text: #9a1500;
+
+            /* Shadows */
+            --shadow-card:      0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            --shadow-focus:     0 0 0 3px rgba(118, 185, 0, 0.18);
+
+            /* Geometry */
+            --radius-sm:  3px;
+            --radius-md:  5px;
+            --radius-lg:  8px;
+
+            /* Fonts */
+            --font-ui:    'Barlow', system-ui, sans-serif;
+            --font-mono:  'IBM Plex Mono', 'Consolas', 'Courier New', monospace;
+
+            /* Transitions */
+            --t-fast:  0.12s ease;
+            --t-base:  0.2s ease;
+        }
+
+
+        /* =====================================================================
+           RESET & BASE
+           ===================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family:      var(--font-ui);
+            background-color: var(--bg-page);
+            color:            var(--text-primary);
+            font-size:        14px;
+            line-height:      1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+
+        /* =====================================================================
+           LAYOUT
+           ===================================================================== */
+        .page-wrapper {
+            max-width:  960px;
+            margin:     0 auto;
+            padding:    32px 24px 48px;
+        }
+
+
+        /* =====================================================================
+           HEADER
+           ===================================================================== */
+        .header {
+            display:         flex;
+            align-items:     center;
+            justify-content: space-between;
+            margin-bottom:   28px;
+            padding-bottom:  20px;
+            border-bottom:   2px solid var(--nvidia-green);
+        }
+
+        .header-left {
+            display:     flex;
+            align-items: center;
+            gap:         12px;
+        }
+
+        /* NVIDIA-style green accent bar on the logo mark */
+        .logo-mark {
+            width:            36px;
+            height:           36px;
+            background-color: var(--nvidia-green);
+            border-radius:    var(--radius-sm);
+            display:          flex;
+            align-items:      center;
+            justify-content:  center;
+            flex-shrink:      0;
+        }
+
+        .logo-mark-inner {
+            width:            18px;
+            height:           18px;
+            border:           2.5px solid #ffffff;
+            border-radius:    2px;
+            position:         relative;
+        }
+
+        .logo-mark-inner::after {
+            content:          '';
+            position:         absolute;
+            bottom:           -5px;
+            left:             50%;
+            transform:        translateX(-50%);
+            width:            8px;
+            height:           2.5px;
+            background-color: #ffffff;
+        }
+
+        .header-title {
+            font-size:   18px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color:       var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size:  11px;
+            font-weight: 500;
+            color:      var(--text-muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 1px;
+        }
+
+        .header-meta {
+            display:     flex;
+            align-items: center;
+            gap:         16px;
+        }
+
+        .meta-tag {
+            font-family:     var(--font-mono);
+            font-size:       11px;
+            color:           var(--text-muted);
+            background-color: var(--bg-page);
+            border:          1px solid var(--border-default);
+            padding:         3px 8px;
+            border-radius:   var(--radius-sm);
+        }
+
+
+        /* =====================================================================
+           STATUS BAR
+           ===================================================================== */
+        .status-bar {
+            display:          flex;
+            align-items:      center;
+            justify-content:  space-between;
+            background-color: var(--bg-panel);
+            border:           1px solid var(--border-default);
+            border-radius:    var(--radius-md);
+            padding:          10px 16px;
+            margin-bottom:    20px;
+            box-shadow:       var(--shadow-card);
+        }
+
+        .status-left {
+            display:     flex;
+            align-items: center;
+            gap:         10px;
+        }
+
+        .status-label {
+            font-size:      11px;
+            font-weight:    600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color:          var(--text-muted);
+        }
+
+        .status-pill {
+            display:       inline-flex;
+
+            
+            align-items:   center;
+            gap:           6px;
+            font-size:     12px;
+            font-weight:   600;
+            padding:       3px 10px;
+            border-radius: 99px;
+            transition:    background-color var(--t-base), color var(--t-base);
+        }
+
+        .status-pill.disconnected {
+            background-color: var(--status-disconnected-bg);
+            color:            var(--status-disconnected-text);
+        }
+
+        .status-pill.connected {
+            background-color: var(--status-connected-bg);
+            color:            var(--status-connected-text);
+        }
+
+        .status-dot {
+            width:         7px;
+            height:        7px;
+            border-radius: 50%;
+            flex-shrink:   0;
+            transition:    background-color var(--t-base);
+        }
+
+        .status-pill.disconnected .status-dot {
+            background-color: var(--log-error);
+        }
+
+        .status-pill.connected .status-dot {
+            background-color: var(--nvidia-green);
+            box-shadow:       0 0 0 2px rgba(118, 185, 0, 0.3);
+            animation:        pulse-dot 2s ease infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(118, 185, 0, 0.3); }
+            50%       { box-shadow: 0 0 0 4px rgba(118, 185, 0, 0.15); }
+        }
+
+        .status-endpoint {
+            font-family: var(--font-mono);
+            font-size:   11px;
+            color:       var(--text-muted);
+        }
+
+
+        /* =====================================================================
+           CONTROL PANELS
+           ===================================================================== */
+        .controls-grid {
+            display:               grid;
+            grid-template-columns: 1fr 1fr;
+            gap:                   16px;
+            margin-bottom:         16px;
+        }
+
+        @media (max-width: 640px) {
+            .controls-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border:           1px solid var(--border-default);
+            border-radius:    var(--radius-md);
+            padding:          18px;
+            box-shadow:       var(--shadow-card);
+        }
+
+        .panel-label {
+            font-size:      10px;
+            font-weight:    700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color:          var(--text-muted);
+            margin-bottom:  10px;
+            display:        flex;
+            align-items:    center;
+            gap:            6px;
+        }
+
+        .panel-label-step {
+            display:          inline-flex;
+            align-items:      center;
+            justify-content:  center;
+            width:            18px;
+            height:           18px;
+            background-color: var(--nvidia-green);
+            color:            #ffffff;
+            font-size:        10px;
+            font-weight:      700;
+            border-radius:    50%;
+            flex-shrink:      0;
+        }
+
+        .input-row {
+            display: flex;
+            gap:     8px;
+        }
+
+        .input-field {
+            flex:             1;
+            background-color: var(--bg-input);
+            border:           1px solid var(--border-default);
+            color:            var(--text-primary);
+            padding:          8px 12px;
+            border-radius:    var(--radius-sm);
+            font-family:      var(--font-mono);
+            font-size:        12px;
+            outline:          none;
+            transition:       border-color var(--t-fast), box-shadow var(--t-fast);
+            min-width:        0;
+        }
+
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-field:focus {
+            border-color: var(--border-focus);
+            box-shadow:   var(--shadow-focus);
+        }
+
+        .btn {
+            display:          inline-flex;
+            align-items:      center;
+            gap:              6px;
+            padding:          8px 16px;
+            border:           none;
+            border-radius:    var(--radius-sm);
+            font-family:      var(--font-ui);
+            font-size:        13px;
+            font-weight:      600;
+            cursor:           pointer;
+            white-space:      nowrap;
+            transition:       background-color var(--t-fast), transform var(--t-fast);
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background-color: var(--nvidia-green);
+            color:            #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--nvidia-green-d);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-btn-clear);
+            color:            var(--text-secondary);
+            border:           1px solid var(--border-default);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-default);
+            color:            var(--text-primary);
+        }
+
+
+        /* =====================================================================
+           TERMINAL / LOG
+           ===================================================================== */
+        .terminal-panel {
+            background-color: var(--bg-panel);
+            border:           1px solid var(--border-default);
+            border-radius:    var(--radius-md);
+            box-shadow:       var(--shadow-card);
+            overflow:         hidden;
+        }
+
+        .terminal-header {
+            display:          flex;
+            align-items:      center;
+            justify-content:  space-between;
+            padding:          10px 16px;
+            background-color: var(--bg-page);
+            border-bottom:    1px solid var(--border-default);
+        }
+
+        .terminal-title {
+            font-size:      10px;
+            font-weight:    700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color:          var(--text-muted);
+            display:        flex;
+            align-items:    center;
+            gap:            8px;
+        }
+
+        /* Three traffic-light dots — purely decorative, professional feel */
+        .terminal-dots {
+            display: flex;
+            gap:     5px;
+        }
+
+        .terminal-dot {
+            width:         10px;
+            height:        10px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot-r { background-color: #ffbdbb; border: 1px solid #e09090; }
+        .terminal-dot-y { background-color: #ffe4a0; border: 1px solid #d4b860; }
+        .terminal-dot-g { background-color: var(--nvidia-green-l); border: 1px solid #a4cc60; }
+
+        .terminal-actions {
+            display:     flex;
+            align-items: center;
+            gap:         8px;
+        }
+
+        .log-count {
+            font-family: var(--font-mono);
+            font-size:   11px;
+            color:       var(--text-muted);
+        }
+
+        #log {
+            height:      440px;
+            overflow-y:  auto;
+            padding:     12px 16px;
+            font-family: var(--font-mono);
+            font-size:   12px;
+            line-height: 1.65;
+            background:  var(--bg-terminal);
+        }
+
+        /* Custom scrollbar for the log */
+        #log::-webkit-scrollbar       { width: 6px; }
+        #log::-webkit-scrollbar-track { background: var(--bg-terminal); }
+        #log::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+        /* Log entry base */
+        .log-entry {
+            display:       flex;
+            gap:           10px;
+            padding:       3px 0;
+            border-bottom: 1px solid transparent;
+            animation:     entry-appear 0.15s ease both;
+        }
+
+        @keyframes entry-appear {
+            from { opacity: 0; transform: translateY(3px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-entry:not(:last-child) {
+            border-bottom-color: var(--border-default);
+        }
+
+        .log-ts {
+            color:       var(--text-muted);
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .log-prefix {
+            font-weight: 600;
+            flex-shrink: 0;
+            min-width:   72px;
+        }
+
+        .log-body {
+            color:     var(--text-primary);
+            word-break: break-word;
+        }
+
+        /* Per-event-type prefix coloring */
+        .event-stream     .log-prefix { color: var(--log-stream);  }
+        .event-agent      .log-prefix { color: var(--log-agent);   }
+        .event-payload    .log-prefix { color: var(--log-payload); }
+        .event-done       .log-prefix { color: var(--log-done);    }
+        .event-success    .log-prefix { color: var(--log-success); }
+        .event-error      .log-prefix { color: var(--log-error);   }
+        .event-info       .log-prefix { color: var(--log-info);    }
+
+        /* Per-event-type body coloring */
+        .event-stream  .log-body { color: var(--log-stream); }
+        .event-agent   .log-body { color: var(--log-agent);  }
+        .event-payload .log-body { color: var(--log-payload);}
+        .event-done    .log-body { color: var(--log-done);   }
+        .event-success .log-body { color: var(--nvidia-green);}
+        .event-error   .log-body { color: var(--log-error);  font-weight: 500; }
+        .event-info    .log-body { color: var(--text-secondary); }
+
+        /* Empty state */
+        .log-empty {
+            display:         flex;
+            align-items:     center;
+            justify-content: center;
+            height:          100%;
+            color:           var(--text-muted);
+            font-size:       12px;
+            letter-spacing:  0.05em;
+        }
+
+        /* =====================================================================
+           FOOTER
+           ===================================================================== */
+        .footer {
+            margin-top:  20px;
+            display:     flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size:   11px;
+            color:       var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            gap:     16px;
+        }
+
+        .footer-link {
+            color:           var(--text-muted);
+            text-decoration: none;
+            letter-spacing:  0.04em;
+        }
+
+        .footer-link:hover {
+            color: var(--nvidia-green);
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo-mark">
+                <div class="logo-mark-inner"></div>
+            </div>
+            <div>
+                <div class="header-title">AutoMentor</div>
+                <div class="header-subtitle">API Diagnostic Client</div>
+            </div>
+        </div>
+        <div class="header-meta">
+            <span class="meta-tag">v0.1.0</span>
+            <span class="meta-tag">ws://127.0.0.1:8000</span>
+        </div>
+    </header>
+
+
+    <!-- ── STATUS BAR ──────────────────────────────────────────────────────── -->
+    <div class="status-bar">
+        <div class="status-left">
+            <span class="status-label">Connection</span>
+            <span id="statusPill" class="status-pill disconnected">
+                <span class="status-dot"></span>
+                <span id="statusText">DISCONNECTED</span>
+            </span>
+        </div>
+        <span id="statusEndpoint" class="status-endpoint">&mdash;</span>
+    </div>
+
+
+    <!-- ── CONTROLS ────────────────────────────────────────────────────────── -->
+    <div class="controls-grid">
+
+        <!-- Step 1: Auth -->
+        <div class="panel">
+            <div class="panel-label">
+                <span class="panel-label-step">1</span>
+                Authenticate
+            </div>
+            <div class="input-row">
+                <input
+                    id="tokenInput"
+                    class="input-field"
+                    type="text"
+                    placeholder="Paste JWT token from /api/v1/session/init"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button class="btn btn-primary" onclick="handleConnect()">Connect</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Transmit -->
+        <div class="panel">
+            <div class="panel-label">
+                <span class="panel-label-step">2</span>
+                Transmit Payload
+            </div>
+            <div class="input-row">
+                <input
+                    id="msgInput"
+                    class="input-field"
+                    type="text"
+                    placeholder="e.g., I am failing calculus and need a study plan"
+                    onkeydown="if (event.key === 'Enter') handleSend()"
+                    spellcheck="false"
+                />
+                <button class="btn btn-primary" onclick="handleSend()">Send</button>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ── TERMINAL ────────────────────────────────────────────────────────── -->
+    <div class="terminal-panel">
+
+        <div class="terminal-header">
+            <div class="terminal-title">
+                <div class="terminal-dots">
+                    <div class="terminal-dot terminal-dot-r"></div>
+                    <div class="terminal-dot terminal-dot-y"></div>
+                    <div class="terminal-dot terminal-dot-g"></div>
+                </div>
+                Event Stream Log
+            </div>
+            <div class="terminal-actions">
+                <span id="logCount" class="log-count">0 events</span>
+                <button class="btn btn-secondary" onclick="handleClearLog()">Clear Buffer</button>
+            </div>
+        </div>
+
+        <div id="log">
+            <div class="log-empty" id="logEmpty">Awaiting connection...</div>
+        </div>
+
+    </div>
+
+
+    <!-- ── FOOTER ──────────────────────────────────────────────────────────── -->
+    <footer class="footer">
+        <span>AutoMentor Backend &mdash; Local Development Environment</span>
+        <div class="footer-links">
+            <a class="footer-link" href="http://127.0.0.1:8000/docs"    target="_blank">/docs</a>
+            <a class="footer-link" href="http://127.0.0.1:8000/redoc"   target="_blank">/redoc</a>
+            <a class="footer-link" href="http://127.0.0.1:8000/health"  target="_blank">/health</a>
+        </div>
+    </footer>
+
+</div><!-- /.page-wrapper -->
+
+
+<script>
+    /* ==========================================================================
+       AutoMentor Diagnostic Client — WebSocket Controller
+       ==========================================================================
+       Architecture:
+         State      → single `state` object, mutated only through setters
+         DOM        → updated only by `updateStatusUI()` and `appendLogEntry()`
+         WS events  → routed by `routeInboundEvent()` switch statement
+    ========================================================================== */
+
+    "use strict";
+
+    // ── State ─────────────────────────────────────────────────────────────────
+
+    const state = {
+        ws:         null,       // active WebSocket instance
+        logCount:   0,          // total entries written to the log
+    };
+
+
+    // ── DOM References ────────────────────────────────────────────────────────
+
+    const DOM = {
+        tokenInput:     () => document.getElementById("tokenInput"),
+        msgInput:       () => document.getElementById("msgInput"),
+        log:            () => document.getElementById("log"),
+        logEmpty:       () => document.getElementById("logEmpty"),
+        logCount:       () => document.getElementById("logCount"),
+        statusPill:     () => document.getElementById("statusPill"),
+        statusText:     () => document.getElementById("statusText"),
+        statusEndpoint: () => document.getElementById("statusEndpoint"),
+    };
+
+
+    // ── Utility: ISO timestamp ────────────────────────────────────────────────
+
+    function getTimestamp() {
+        return new Date().toISOString().split("T")[1].slice(0, 12);
+    }
+
+
+    // ── Status UI update ──────────────────────────────────────────────────────
+
+    /**
+     * @param {"connected" | "disconnected"} mode
+     * @param {string} label
+     * @param {string} [endpoint]
+     */
+    function updateStatusUI(mode, label, endpoint = "\u2014") {
+        const pill     = DOM.statusPill();
+        const text     = DOM.statusText();
+        const ep       = DOM.statusEndpoint();
+
+        pill.className = `status-pill ${mode}`;
+        text.textContent = label;
+        ep.textContent   = endpoint;
+    }
+
+
+    // ── Log entry renderer ────────────────────────────────────────────────────
+
+    /**
+     * Appends a structured log entry to the terminal.
+     *
+     * @param {string} cssClass   - One of: event-stream | event-agent |
+     *                              event-payload | event-done | event-success |
+     *                              event-error | event-info
+     * @param {string} prefix     - e.g. "[STREAM]"
+     * @param {string} body       - Message content
+     * @param {string} [eventKey] - data-event attribute for chunk accumulation
+     */
+    function appendLogEntry(cssClass, prefix, body, eventKey = "") {
+        const logEl = DOM.log();
+
+        // Remove the empty-state placeholder on first entry
+        const emptyEl = DOM.logEmpty();
+        if (emptyEl) emptyEl.remove();
+
+        const entry  = document.createElement("div");
+        entry.className      = `log-entry ${cssClass}`;
+        entry.dataset.event  = eventKey;
+
+        const tsSpan     = document.createElement("span");
+        tsSpan.className = "log-ts";
+        tsSpan.textContent = getTimestamp();
+
+        const prefixSpan     = document.createElement("span");
+        prefixSpan.className = "log-prefix";
+        prefixSpan.textContent = prefix;
+
+        const bodySpan     = document.createElement("span");
+        bodySpan.className = "log-body";
+        bodySpan.textContent = body;
+
+        entry.appendChild(tsSpan);
+        entry.appendChild(prefixSpan);
+        entry.appendChild(bodySpan);
+
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+
+        // Update count badge
+        state.logCount += 1;
+        DOM.logCount().textContent = `${state.logCount} event${state.logCount !== 1 ? "s" : ""}`;
+    }
+
+
+    // ── Message chunk accumulator ─────────────────────────────────────────────
+
+    /**
+     * For message_chunk events, accumulates text into the last open chunk
+     * entry rather than creating a new DOM node for every token.
+     */
+    function accumulateChunk(chunk) {
+        const logEl = DOM.log();
+        const last  = logEl.lastElementChild;
+
+        if (last && last.dataset.event === "message_chunk" && last.dataset.final !== "true") {
+            last.querySelector(".log-body").textContent += chunk;
+            logEl.scrollTop = logEl.scrollHeight;
+            return;
+        }
+
+        // No existing open chunk entry — create a new one
+        appendLogEntry("event-stream", "[STREAM]", chunk, "message_chunk");
+    }
+
+
+    // ── Inbound WebSocket event router ────────────────────────────────────────
+
+    /**
+     * Routes a parsed server event to the correct log renderer.
+     * @param {string} eventType
+     * @param {object} data
+     */
+    function routeInboundEvent(eventType, data) {
+        switch (eventType) {
+
+            case "connection_established":
+                appendLogEntry(
+                    "event-success",
+                    "[CONNECTED]",
+                    data.message || "Session established.",
+                    "connection_established"
+                );
+                break;
+
+            case "agent_state_update": {
+                const agents  = Array.isArray(data.active_agents)
+                    ? data.active_agents.join(", ")
+                    : "SYSTEM";
+                const stepStr = `(${data.step}/${data.total_steps})`;
+                appendLogEntry(
+                    "event-agent",
+                    "[AGENT]",
+                    `[${agents}]  ${data.status_message}  ${stepStr}`,
+                    "agent_state_update"
+                );
+                break;
+            }
+
+            case "message_chunk":
+                if (data.is_final) {
+                    // Mark the last chunk entry as finalised
+                    const logEl = DOM.log();
+                    const last  = logEl.lastElementChild;
+                    if (last && last.dataset.event === "message_chunk") {
+                        last.dataset.final = "true";
+                    }
+                    appendLogEntry("event-info", "[STREAM]", "(EOF)", "message_chunk_eof");
+                } else if (data.chunk) {
+                    accumulateChunk(data.chunk);
+                }
+                break;
+
+            case "ui_action":
+            case "ui_component_trigger": {
+                const payloadStr = data.payload
+                    ? JSON.stringify(data.payload).slice(0, 180)
+                    : JSON.stringify(data).slice(0, 180);
+                appendLogEntry(
+                    "event-payload",
+                    "[PAYLOAD]",
+                    payloadStr,
+                    "ui_action"
+                );
+                break;
+            }
+
+            case "request_complete":
+                appendLogEntry(
+                    "event-done",
+                    "[DONE]",
+                    `${data.session_summary}  |  tokens: ${data.tokens_used}`,
+                    "request_complete"
+                );
+                break;
+
+            case "error":
+                appendLogEntry(
+                    "event-error",
+                    "[ERROR]",
+                    data.message || JSON.stringify(data),
+                    "error"
+                );
+                break;
+
+            default:
+                appendLogEntry(
+                    "event-info",
+                    `[${eventType.toUpperCase()}]`,
+                    JSON.stringify(data).slice(0, 200),
+                    eventType
+                );
+        }
+    }
+
+
+    // ── WebSocket lifecycle handlers ──────────────────────────────────────────
+
+    function onWsOpen() {
+        const token = DOM.tokenInput().value.trim();
+        const url   = `ws://127.0.0.1:8000/ws/chat?token=${token}`;
+        updateStatusUI("connected", "CONNECTED", url);
+        appendLogEntry("event-info", "[INFO]", `Transport open — ${url}`, "info");
+    }
+
+    function onWsMessage(rawEvent) {
+        let parsed;
+        try {
+            parsed = JSON.parse(rawEvent.data);
+        } catch {
+            appendLogEntry("event-error", "[ERROR]", "Malformed JSON received from server.", "error");
+            return;
+        }
+        routeInboundEvent(parsed.event, parsed.data || {});
+    }
+
+    function onWsClose(closeEvent) {
+        updateStatusUI("disconnected", `DISCONNECTED  (code: ${closeEvent.code})`);
+        appendLogEntry(
+            "event-info",
+            "[INFO]",
+            `Socket closed — code: ${closeEvent.code}`,
+            "info"
+        );
+        state.ws = null;
+    }
+
+    function onWsError() {
+        appendLogEntry(
+            "event-error",
+            "[ERROR]",
+            "Connection failure. Verify the backend server is running on port 8000.",
+            "error"
+        );
+    }
+
+
+    // ── Public handlers (called by HTML onclick) ──────────────────────────────
+
+    function handleConnect() {
+        const token = DOM.tokenInput().value.trim();
+
+        if (!token) {
+            alert("Authentication token is required.\nGet one from POST /api/v1/session/init.");
+            return;
+        }
+
+        // Close any existing connection cleanly before opening a new one
+        if (state.ws) {
+            state.ws.close();
+            state.ws = null;
+        }
+
+        const url = `ws://127.0.0.1:8000/ws/chat?token=${token}`;
+
+        appendLogEntry("event-info", "[INFO]", `Initiating connection to ${url}`, "info");
+        updateStatusUI("disconnected", "CONNECTING...", url);
+
+        const ws   = new WebSocket(url);
+        ws.onopen    = onWsOpen;
+        ws.onmessage = onWsMessage;
+        ws.onclose   = onWsClose;
+        ws.onerror   = onWsError;
+
+        state.ws = ws;
+    }
+
+    function handleSend() {
+        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+            alert("No active connection.\nConnect using your JWT token first.");
+            return;
+        }
+
+        const inputEl = DOM.msgInput();
+        const content = inputEl.value.trim();
+        if (!content) return;
+
+        const payload = JSON.stringify({
+            event: "user_message",
+            data:  { content, session_id: "" },
+        });
+
+        state.ws.send(payload);
+        appendLogEntry("event-info", "[TRANSMIT]", content, "transmit");
+        inputEl.value = "";
+        inputEl.focus();
+    }
+
+    function handleClearLog() {
+        const logEl = DOM.log();
+        logEl.innerHTML = "";
+        state.logCount  = 0;
+        DOM.logCount().textContent = "0 events";
+
+        // Restore empty state placeholder
+        const empty       = document.createElement("div");
+        empty.id          = "logEmpty";
+        empty.className   = "log-empty";
+        empty.textContent = "Buffer cleared.";
+        logEl.appendChild(empty);
+    }
+</script>
+
+</body>
+</html>
