@@ -157,12 +157,3 @@ Some solid next upgrades for this repo:
 
 ---
 
-## Contributing
-
-Issues and PRs are welcome. If you’re making changes to streaming event formats or agent contracts, keep frontend compatibility in mind—those message/event shapes are the glue between the UI and backend.
-
----
-
-## License
-
-No license is currently specified. If you plan to make this public or accept external contributions, adding a license (MIT/Apache-2.0/etc.) is a good next step.
