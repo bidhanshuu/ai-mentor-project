@@ -39,14 +39,7 @@
             PARTIAL RESPONSE
        (Limited by agent selection)
        
-Problems:
-❌ "solve this?" doesn't match any intent → generic response
-❌ If Diagnostic is chosen, Mentor doesn't respond
-❌ No conversation history awareness
-❌ Can't discuss random academic topics
-```
 
----
 
 ## PROPOSED ARCHITECTURE (General Conversations)
 
@@ -107,11 +100,11 @@ Problems:
            ✅ VISIBLE TO STUDENT
 
 Benefits:
-✅ Any question gets a response
-✅ Mentor always responds (primary)
-✅ Full conversation context used
-✅ Can discuss anything academic
-✅ Feels like real tutoring
+ Any question gets a response
+Mentor always responds (primary)
+Full conversation context used
+Can discuss anything academic
+Feels like real tutoring
 ```
 
 ---
@@ -179,7 +172,7 @@ Response: [Assessment + Explanation]
 
 User: "Can recursion be used here?"
  ↓
-Intent: "general" ❌ (doesn't match any category)
+Intent: "general"  (doesn't match any category)
  ↓
 Mentor called alone (maybe Diagnostic)
  ↓
@@ -293,5 +286,5 @@ That's it! The rest handles parallelization and merging responses.
 - `agent_status` ← Optional status show
 - `error` (same)
 
-**Key improvement**: Frontend mostly just displays `message_chunk` events in order. Simpler UI logic.
+
 
